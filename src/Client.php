@@ -20,7 +20,7 @@ class Client {
   private function normalizeHeaders($headers)
   {
     return $result = array_combine(
-       array_map(fn($header) => strtolower($header), array_keys($headers)),
+       array_map(function($header) { return strtolower($header); }, array_keys($headers)),
        $headers
     );
 
