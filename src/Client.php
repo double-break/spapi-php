@@ -51,7 +51,7 @@ class Client {
       'method' => $requestOptions['method']
     ];
 
-    if ($requestOptions['query']) {
+    if (isset($requestOptions['query'])) {
       $query = $requestOptions['query'];
       ksort($query);
       $signOptions['query_string'] =  \GuzzleHttp\Psr7\build_query($query);
