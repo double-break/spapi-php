@@ -58,15 +58,13 @@ class Client {
     }
 
     if (isset($requestOptions['form_params'])) {
-      $formParams = $requestOptions['form_params'];
-      ksort($formParams);
-      $signOptions['payload'] = \GuzzleHttp\Psr7\build_query($formParams);
+      ksort($requestOptions['form_params']);
+      $signOptions['payload'] = \GuzzleHttp\Psr7\build_query($requestOptions['form_params']);
     }
 
     if (isset($requestOptions['json'])) {
-      $payload = $requestOptions['json'];
-      ksort($payload);
-      $signOptions['payload'] = json_encode($payload);
+      ksort($requestOptions['json']);
+      $signOptions['payload'] = json_encode($requestOptions['json']);
     }
 
     //Sign
