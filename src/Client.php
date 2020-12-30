@@ -57,14 +57,16 @@ class Client {
       $signOptions['query_string'] =  \GuzzleHttp\Psr7\build_query($query);
     }
 
-    if (isset($request['form_params'])) {
-      $formParams = $reqest['form_params'];
+    if (isset($requestOptions['form_params'])) {
+      $formParams = $requestOptions['form_params'];
       ksort($formParams);
       $signOptions['payload'] = \GuzzleHttp\Psr7\build_query($formParams);
     }
 
-    if (isset($request['json'])) {
-      $signOptions['payload'] = json_encode($requestOptions['json']);
+    if (isset($requestOptions['json'])) {
+      $payload = $requestOptions['json'];
+      ksort($payload);
+      $signOptions['payload'] = json_encode($payload);
     }
 
     //Sign

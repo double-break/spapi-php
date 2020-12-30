@@ -58,7 +58,7 @@ class Credentials {
      $json = json_decode($response->getBody(), true);
      $this->tokenStorege->storeToken('lwa_access_token', [
        'token' => $json['access_token'],
-       'expiresOn' => time() + $this->config['access_token_longevity'] ?? 3600
+       'expiresOn' => time() + ($this->config['access_token_longevity'] ?? 3600)
      ]);
 
      return $json['access_token'];
