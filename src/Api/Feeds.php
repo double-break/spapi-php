@@ -10,7 +10,11 @@
 * The Selling Partner API for Feeds lets you upload data to Amazon on behalf of a selling partner.
 */
 namespace DoubleBreak\Spapi\Api;
+
+use DoubleBreak\Spapi\ASECryptoStreamFactory;
 use DoubleBreak\Spapi\Client;
+use GuzzleHttp\Psr7\Request;
+use Patchwork\Utf8;
 
 class Feeds extends Client {
 
@@ -97,4 +101,86 @@ class Feeds extends Client {
       'method' => 'GET',
     ]);
   }
+
+    /**
+     * @param $payload : Response from createFeedDocument Function. e.g.: response['payload']
+     * @param $contentType : Content type used during createFeedDocument function call.
+     * @param $feedContentFilePath : Path to file that contain data to be uploaded.
+     * @return string
+     * @throws \Exception
+     */
+  public function uploadFeedDocument($payload, $contentType, $feedContentFilePath)
+  {
+      $encryptionDetails = $payload['encryptionDetails'];
+      $feedUploadUrl = $payload['url'];
+
+      $key = $encryptionDetails['key'];
+      $initializationVector = $encryptionDetails['initializationVector'];
+
+      // base64 decode before using in encryption
+      $initializationVector = base64_decode($initializationVector, true);
+      $key = base64_decode($key, true);
+
+      // get file to upload
+      $file = file_get_contents($feedContentFilePath);
+      $fileResourceType = gettype($file);
+
+      // resource or string ? make it to a string
+      if ($fileResourceType == 'resource') {
+          $file = stream_get_contents($file);
+      }
+
+      // utf8 !
+      $file = Utf8::utf8_encode($file);
+
+      // encrypt string and get value as base64 encoded string
+      $encryptedFile = ASECryptoStreamFactory::encrypt($file, $key, $initializationVector);
+
+      // my http client
+      $client = new Client(['exceptions' => false]);
+
+      $request = new Request(
+      // PUT!
+          'PUT',
+          // predefined url
+          $feedUploadUrl,
+          // content type equal to content type from response createFeedDocument-operation
+          array('Content-Type' => $contentType),
+          // resource File
+          $encryptedFile
+      );
+
+      $response = $client->send($request);
+      $HTTPStatusCode = $response->getStatusCode();
+
+      if ($HTTPStatusCode == 200) {
+          return 'Done';
+      } else {
+          return $response->getBody()->getContents();
+      }
+  }
+
+    /**
+     * @param $payload : Response from getFeedDocument Function. e.g.: response['payload']
+     * @return array : Feed Processing Report.
+     */
+    public function downloadFeedProcessingReport($payload)
+    {
+        $encryptionDetails = $payload['encryptionDetails'];
+        $feedDownloadUrl = $payload['url'];
+
+        $key = $encryptionDetails['key'];
+        $initializationVector = $encryptionDetails['initializationVector'];
+
+        // base64 decode before using in encryption
+        $initializationVector = base64_decode($initializationVector, true);
+        $key = base64_decode($key, true);
+
+        $decryptedFile = ASECryptoStreamFactory::decrypt(file_get_contents($feedDownloadUrl), $key, $initializationVector);
+        $decryptedFile = preg_replace('/\s+/S', " ", $decryptedFile);
+
+        $xml = simplexml_load_string($decryptedFile);
+        $json = json_encode($xml);
+        return json_decode($json, TRUE);
+    }
 }

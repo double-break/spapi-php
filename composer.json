@@ -10,7 +10,10 @@
   ],
   "require": {
     "guzzlehttp/guzzle": "^6.5",
-    "guzzlehttp/psr7": "^1.7"
+    "guzzlehttp/psr7": "^1.7",
+    "patchwork/utf8": "~1.2",
+    "ext-simplexml": "*",
+    "ext-json": "*"
   },
   "autoload": {
     "psr-4": { "DoubleBreak\\Spapi\\" : "src/" }
