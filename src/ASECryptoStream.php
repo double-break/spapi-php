@@ -3,7 +3,7 @@
 namespace DoubleBreak\Spapi;
 
 
-class ASECryptoStreamFactory
+class ASECryptoStream
 {
     /**
      * default: 8 fpr PKSC5!
