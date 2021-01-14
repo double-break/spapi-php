@@ -1,4 +1,8 @@
 <?php
+/*
+ *  @author: JacksonJeans
+ *  @email: julian.tietz@gidutex.de
+ */
 
 namespace DoubleBreak\Spapi;
 

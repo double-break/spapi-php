@@ -107,3 +107,39 @@ Simple use
 
   print_r($result);
 ```
+
+### Feed API usage
+For Feed API, user can follow [Feeds API Use Case Guide](https://github.com/amzn/selling-partner-api-docs/blob/main/guides/use-case-guides/feeds-api-use-case-guide-2020-09-04.md). 
+
+And in this guide for step 2. Encrypt and upload the feed data: user can use below example:
+```php
+<?php
+
+// content type of the feed data to be uploaded.
+$contentType = 'text/xml; charset=UTF-8';
+
+// create feed document
+$feedClient = new \DoubleBreak\Spapi\Api\Feeds($cred, $config);
+$response = $feedClient->createFeedDocument(["contentType" => $contentType]);
+$payload = $response['payload'];
+
+$feedContentFilePath = './testFeedDoc.xml';
+
+$result = (new \DoubleBreak\Spapi\Helper\Feeder())->uploadFeedDocument($payload,$contentType,$feedContentFilePath);
+print_r($result);
+```
+ 
+And for Step 6. Download and decrypt the feed processing report: user can use below example:
+```php
+<?php
+$feedClient = new \DoubleBreak\Spapi\Api\Feeds($cred, $config);
+
+// $resultFeedDocumentId: from response of getFeed() function.
+$resultFeedDocumentId = 'amzn1.tortuga.3.ed4cd0d8-447b-4c22-96b5-52da8ace1207.T3YUVYPGKE9BMY';
+$response = $feedClient->getFeedDocument($resultFeedDocumentId);
+$payload = $response['payload'];
+
+$result = (new \DoubleBreak\Spapi\Helper\Feeder())->downloadFeedProcessingReport($payload);
+print_r($result);
+```
+ 
