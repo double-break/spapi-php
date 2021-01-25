@@ -74,7 +74,6 @@ class Credentials {
     /**
      * Request a Login with Amazon access token
      * @see https://github.com/amzn/selling-partner-api-docs/blob/main/guides/developer-guide/SellingPartnerApiDeveloperGuide.md#step-1-request-a-login-with-amazon-access-token
-     * @author Valentin
      * @return mixed
      * @throws \Exception
      */
