@@ -1,20 +1,25 @@
 <?php
 namespace DoubleBreak\Spapi;
 use GuzzleHttp\Client;
+use Webmozart\Assert\Assert;
 
 class Credentials {
 
   use HttpClientFactoryTrait;
 
   private $config;
-  private $tokenStorege;
+  private $tokenStorage;
   private $signer;
+  private $for_api;
 
-  public function __construct(TokenStorageInterface $tokenStorage, Signer $signer, array $config = [])
+  public function __construct(TokenStorageInterface $tokenStorage, Signer $signer, array $config, $for_api = '')
   {
     $this->config = $config;
-    $this->tokenStorege = $tokenStorage;
+    $this->tokenStorage = $tokenStorage;
     $this->signer = $signer;
+
+    Assert::inArray($for_api, ['', 'authorization_api', 'notification_api'], "for_api variable value must be '' or 'authorization_api' or 'notification_api'");
+    $this->for_api = $for_api;
   }
 
   public function getCredentials()
@@ -31,8 +36,17 @@ class Credentials {
 
   private function getLWAToken()
   {
+    if ($this->for_api === '') {
+      $tokenKey = 'lwa_access_token';
+    }
+    elseif ($this->for_api === 'authorization_api') {
+      $tokenKey = 'lwa_access_token_auth_api';
+    }
+    else{
+      $tokenKey = 'lwa_access_token_notification_api';
+    }
 
-    $knownToken = $this->loadTokenFromStorage('lwa_access_token');
+    $knownToken = $this->loadTokenFromStorage($tokenKey);
     if (!is_null($knownToken)) {
       return $knownToken;
     }
@@ -41,22 +55,42 @@ class Credentials {
       'base_uri' => 'https://api.amazon.com'
     ]);
 
-    try {
-      $requestOptions =  [
-        'form_params' => [
-          'grant_type' => 'refresh_token',
-          'refresh_token' => $this->config['refresh_token'],
-          'client_id' => $this->config['client_id'],
-          'client_secret' => $this->config['client_secret']
-        ]
-      ];
-      $response = $client->post('/auth/o2/token', $requestOptions);
-    } catch (\Exception $e) {
-      //log something
-      throw $e;
-    }
+      try {
+          if ($this->for_api === '') {
+              $requestOptions = [
+                  'form_params' => [
+                      'grant_type' => 'refresh_token',
+                      'refresh_token' => $this->config['refresh_token'],
+                      'client_id' => $this->config['client_id'],
+                      'client_secret' => $this->config['client_secret']
+                  ]
+              ];
+          } elseif ($this->for_api === 'authorization_api') {
+              $requestOptions = [
+                  'form_params' => [
+                      'grant_type' => 'client_credentials',
+                      'scope' => 'sellingpartnerapi::migration',
+                      'client_id' => $this->config['client_id'],
+                      'client_secret' => $this->config['client_secret']
+                  ]
+              ];
+          } else {
+              $requestOptions = [
+                  'form_params' => [
+                      'grant_type' => 'client_credentials',
+                      'scope' => 'sellingpartnerapi::notifications',
+                      'client_id' => $this->config['client_id'],
+                      'client_secret' => $this->config['client_secret']
+                  ]
+              ];
+          }
+          $response = $client->post('/auth/o2/token', $requestOptions);
+        } catch (\Exception $e) {
+            //log something
+            throw $e;
+        }
      $json = json_decode($response->getBody(), true);
-     $this->tokenStorege->storeToken('lwa_access_token', [
+     $this->tokenStorage->storeToken($tokenKey, [
        'token' => $json['access_token'],
        'expiresOn' => time() + ($this->config['access_token_longevity'] ?? 3600)
      ]);
@@ -114,7 +148,7 @@ class Credentials {
         'secret_key' => $credentials['SecretAccessKey'],
         'session_token' => $credentials['SessionToken']
       ];
-      $this->tokenStorege->storeToken('sts_credentials', [
+      $this->tokenStorage->storeToken('sts_credentials', [
         'token' => $tokens,
         'expiresOn' => $credentials['Expiration']
       ]);
@@ -132,7 +166,7 @@ class Credentials {
 
   private function loadTokenFromStorage($key)
   {
-    $knownToken = $this->tokenStorege->getToken($key);
+    $knownToken = $this->tokenStorage->getToken($key);
     if (!empty($knownToken)) {
       $expiresOn = $knownToken['expiresOn'];
       if ($expiresOn > time()) {

@@ -88,7 +88,13 @@ Name  | Description  |  Type
 
   //Create Credentials service and call getCredentials() to obtain
   //all the tokens needed under the hood
-  $credentials = new DoubleBreak\Spapi\Credentials($tokenStorage, $signer, $config);
+
+  $for_api = ''; 
+  //default value for $for_api = '';
+  // '' : credentials for authorized api requests e.g. Orders API, Catalog API, etc.// 
+  //'authorization_api' : credentials for grantless operation for Authorization API.
+  //'notification_api' : credentials for grantless operation for Notification API.
+  $credentials = new DoubleBreak\Spapi\Credentials($tokenStorage, $signer, $config, $for_api);
   $cred = $credentials->getCredentials();
 
 
