@@ -8,7 +8,7 @@ class Client {
   protected $credentials;
   protected $config;
   protected $signer;
-
+  protected $lastHttpResponse = null;
   public function __construct(array $credentials = [], array $config = [])
   {
     $this->credentials = $credentials;
@@ -51,19 +51,19 @@ class Client {
       'method' => $requestOptions['method']
     ];
 
-    if ($requestOptions['query']) {
+    if (isset($requestOptions['query'])) {
       $query = $requestOptions['query'];
       ksort($query);
       $signOptions['query_string'] =  \GuzzleHttp\Psr7\build_query($query);
     }
 
-    if (isset($request['form_params'])) {
-      $formParams = $reqest['form_params'];
-      ksort($formParams);
-      $signOptions['payload'] = \GuzzleHttp\Psr7\build_query($formParams);
+    if (isset($requestOptions['form_params'])) {
+      ksort($requestOptions['form_params']);
+      $signOptions['payload'] = \GuzzleHttp\Psr7\build_query($requestOptions['form_params']);
     }
 
-    if (isset($request['json'])) {
+    if (isset($requestOptions['json'])) {
+      ksort($requestOptions['json']);
       $signOptions['payload'] = json_encode($requestOptions['json']);
     }
 
@@ -76,16 +76,22 @@ class Client {
     ]);
 
     try {
+      $this->lastHttpResponse = null;
       $method = $requestOptions['method'];
       unset($requestOptions['method']);
-      $result = $client->request($method, $uri, $requestOptions);
-      return json_decode($result->getBody(), true);
-    } catch (\Exception $e) {
-      //do some logging
+      $response = $client->request($method, $uri, $requestOptions);
+      $this->lastHttpResponse = $response;
+      return json_decode($response->getBody(), true);
+    } catch (\GuzzleHttp\Exception\ClientException $e) {
+      $this->lastHttpResponse = $e->getResponse();
       throw $e;
     }
 
   }
 
+  public function getLastHttpResponse()
+  {
+    return $this->lastHttpResponse;
+  }
 
 }
