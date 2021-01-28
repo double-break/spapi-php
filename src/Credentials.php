@@ -98,15 +98,21 @@ class Credentials {
                 ]
             ];
             $response = $client->post('/auth/o2/token', $requestOptions);
+
+            $json = json_decode($response->getBody(), true);
+
         } catch (\Exception $e) {
             //log something
             throw $e;
         }
-        $json = json_decode($response->getBody(), true);
+
+        if (!array_key_exists('access_token', $json)){
+            throw new IncorrectResponseException('Failed to load migration token.');
+        }
 
         $this->tokenStorege->storeToken('migration_token', [
             'token' => $json['access_token'],
-            'expiresOn' => time() + ($this->config['access_token_longevity'] ?? 3600)
+            'expiresOn' => time() + $json['expires_in']
         ]);
 
         return $json['access_token'];
