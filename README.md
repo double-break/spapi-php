@@ -48,7 +48,7 @@ Name  | Description  |  Type
 
 
 ## Examples
-Simple use
+### Simple use
 ```php
 <?php
   include __DIR__ . '/vendor/autoload.php';
@@ -59,8 +59,8 @@ Simple use
   $config = [
     //Guzzle configuration
     'http' => [
-      'verify' => false,
-      'debug' => true
+      'verify' => false,    //<--- NOT SAFE FOR PRODUCTION
+      'debug' => true       //<--- NOT SAFE FOR PRODUCTION
     ],
 
     //LWA: Keys needed to obtain access token from Login With Amazon Service
@@ -109,7 +109,7 @@ Simple use
 ```
 
 ### Feed API usage
-For Feed API, user can follow [Feeds API Use Case Guide](https://github.com/amzn/selling-partner-api-docs/blob/main/guides/use-case-guides/feeds-api-use-case-guide-2020-09-04.md). 
+For Feed API, user can follow [Feeds API Use Case Guide](https://github.com/amzn/selling-partner-api-docs/blob/main/guides/use-case-guides/feeds-api-use-case-guide-2020-09-04.md).
 
 And in this guide for step 2. Encrypt and upload the feed data: user can use below example:
 ```php
@@ -128,7 +128,7 @@ $feedContentFilePath = './testFeedDoc.xml';
 $result = (new \DoubleBreak\Spapi\Helper\Feeder())->uploadFeedDocument($payload,$contentType,$feedContentFilePath);
 print_r($result);
 ```
- 
+
 And for Step 6. Download and decrypt the feed processing report: user can use below example:
 ```php
 <?php
@@ -142,8 +142,83 @@ $payload = $response['payload'];
 $result = (new \DoubleBreak\Spapi\Helper\Feeder())->downloadFeedProcessingReport($payload);
 print_r($result);
 ```
+### Debugging responses
+```php
+<?php
+  //configuration and initialization here
 
-### Migrating authorization from Amazon Marketplace Web Service to Selling Partner Api 
+  $catalogClinet = new DoubleBreak\Spapi\Api\Catalog($cred, $config);
+  try {
+    $result = $catalogClinet->getCatalogItem('B074Z9QH5F', [
+      'MarketplaceId' => 'A1PA6795UKMFR9',
+    ])['payload'];
+    //do your business here
+  } catch (\GuzzleHttp\Exception\ClientException $e) {
+    $httpCode = $e->getResponse()->getStatusCode();
+    $errorBody =  $e->getResponse()->getBody();
+
+    echo "Amazon SP API responded with HTTP {$httpCode}\n {$errorBody}";
+
+  } catch(\Exception $e) {
+    echo "Unexpected exception: " . $e->getMessage();
+  }
+```
+
+### Accessing response headers
+📝Accessing headers by using client's `getLastHttpResponse()` is available since v1.0.5
+```php
+<?php
+  //configuration and initialization here
+
+  //Create SP API Catalog client and execute one ot its REST methds.
+  $catalogClinet = new DoubleBreak\Spapi\Api\Catalog($cred, $config);
+
+  //Check the catalog info for B074Z9QH5F ASIN
+  $result = $catalogClinet->getCatalogItem('B074Z9QH5F', [
+    'MarketplaceId' => 'A1PA6795UKMFR9',
+  ])['payload'];
+
+  $headers = $catalogClinet->getLastHttpResponse()->getHeaders();
+  foreach ($headers as $headerName => $values) {
+    echo "{$headerName}: " . implode(','. $values);
+  }
+```
+
+
+
+### Debugging 4xx and 5xx response headers
+📝Accessing headers by using client's `getLastHttpResponse()` is available since v1.0.5
+```php
+<?php
+  //configuration and initialization here
+
+  $catalogClinet = new DoubleBreak\Spapi\Api\Catalog($cred, $config);
+  try {
+    $result = $catalogClinet->getCatalogItem('B074Z9QH5F', [
+      'MarketplaceId' => 'A1PA6795UKMFR9',
+    ])['payload'];
+    //do your business here
+  } catch (\GuzzleHttp\Exception\ClientException $e) {
+    $headers = $e->getResponse()->getHeaders();
+    print_r($headers);
+  }
+
+  // OR
+
+  try {
+    $result = $catalogClinet->getCatalogItem('B074Z9QH5F', [
+      'MarketplaceId' => 'A1PA6795UKMFR9',
+    ])['payload'];
+    //do your business here
+
+  } catch (\GuzzleHttp\Exception\ClientException $e) {
+    $headers = $catalogClinet->getLastHttpResponse()->getHeaders();
+    print_r($headers);
+  }
+
+```
+
+### Migrating authorization from Amazon Marketplace Web Service to Selling Partner Api
 
 [Please, see more details in Selling Partner Api docs](https://github.com/amzn/selling-partner-api-docs/blob/main/guides/developer-guide/SellingPartnerApiDeveloperGuide.md#migrating-authorization-from-amazon-marketplace-web-service)
 
