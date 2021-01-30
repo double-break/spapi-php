@@ -17,10 +17,16 @@ class Credentials {
     $this->signer = $signer;
   }
 
-  public function getCredentials()
+    /**
+     * Returns credentials
+     * use $useMigrationToken = true for /authorization/v1/authorizationCode request
+     * @param false $useMigrationToken
+     * @return array
+     * @throws \Exception
+     */
+  public function getCredentials($useMigrationToken = false)
   {
-
-      $lwaAccessToken = $this->getLWAToken();
+      $lwaAccessToken = $useMigrationToken ? $this->getMigrationToken() : $this->getLWAToken();
       $stsCredentials = $this->getStsTokens();
 
       return [
@@ -63,6 +69,53 @@ class Credentials {
 
      return $json['access_token'];
 
+    }
+
+    /**
+     * Request a Login with Amazon access token
+     * @see https://github.com/amzn/selling-partner-api-docs/blob/main/guides/developer-guide/SellingPartnerApiDeveloperGuide.md#step-1-request-a-login-with-amazon-access-token
+     * @return mixed
+     * @throws \Exception
+     */
+    public function getMigrationToken()
+    {
+        $knownToken = $this->loadTokenFromStorage('migration_token');
+        if (!is_null($knownToken)) {
+            return $knownToken;
+        }
+
+        $client = $this->createHttpClient([
+            'base_uri' => 'https://api.amazon.com'
+        ]);
+
+        try {
+            $requestOptions = [
+                'form_params' => [
+                    'grant_type' => 'client_credentials',
+                    'scope' => 'sellingpartnerapi::migration',
+                    'client_id' => $this->config['client_id'],
+                    'client_secret' => $this->config['client_secret']
+                ]
+            ];
+            $response = $client->post('/auth/o2/token', $requestOptions);
+
+            $json = json_decode($response->getBody(), true);
+
+        } catch (\Exception $e) {
+            //log something
+            throw $e;
+        }
+
+        if (!array_key_exists('access_token', $json)){
+            throw new IncorrectResponseException('Failed to load migration token.');
+        }
+
+        $this->tokenStorege->storeToken('migration_token', [
+            'token' => $json['access_token'],
+            'expiresOn' => time() + $json['expires_in']
+        ]);
+
+        return $json['access_token'];
   }
 
 
@@ -128,7 +181,35 @@ class Credentials {
 
   }
 
+    /**
+     * Exchanges the LWA authorization code for an LWA refresh token
+     * @see https://github.com/amzn/selling-partner-api-docs/blob/main/guides/developer-guide/SellingPartnerApiDeveloperGuide.md#step-5-your-application-exchanges-the-lwa-authorization-code-for-an-lwa-refresh-token
+     * @param $authorizationCode
+     * @throws \Exception
+     */
+    public function exchangesAuthorizationCodeForRefreshToken($authorizationCode)
+    {
+        $client = $this->createHttpClient([
+            'base_uri' => 'https://api.amazon.com'
+        ]);
 
+        try {
+            $requestOptions = [
+                'form_params' => [
+                    'grant_type' => 'authorization_code',
+                    'code' => $authorizationCode,
+                    'client_id' => $this->config['client_id'],
+                    'client_secret' => $this->config['client_secret']
+                ]
+            ];
+            $response = $client->post('/auth/o2/token', $requestOptions);
+
+            return json_decode($response->getBody(), true);
+
+        } catch (\Exception $e) {
+            throw $e;
+        }
+    }
 
   private function loadTokenFromStorage($key)
   {
