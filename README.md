@@ -223,3 +223,65 @@ print_r($result);
   }
 
 ```
+
+### Migrating authorization from Amazon Marketplace Web Service to Selling Partner Api
+
+[Please, see more details in Selling Partner Api docs](https://github.com/amzn/selling-partner-api-docs/blob/main/guides/developer-guide/SellingPartnerApiDeveloperGuide.md#migrating-authorization-from-amazon-marketplace-web-service)
+
+```php
+<?php
+include __DIR__ . '/vendor/autoload.php';
+
+  /** The Setup **/
+
+$config = [
+    //Guzzle configuration
+    'http' => [
+        'verify' => false,
+        'debug' => true
+    ],
+
+    //LWA: Keys needed to obtain access token from Login With Amazon Service
+    'refresh_token' => '<YOUR-REFRESH-TOKEN>',
+    'client_id' => '<CLINET-ID-IN-SELLER-CONSOLE>',
+    'client_secret' => '<CLIENT_SECRET>',
+
+    //STS: Keys of the IAM role which are needed to generate Secure Session
+    // (a.k.a Secure token) for accessing and assuming the IAM role
+    'access_key' => '<STS-ACCESS_KEY>',
+    'secret_key' => '<STS-SECRET-KEY>',
+    'role_arn' => '<ROLE-ARN>' ,
+
+    //API: Actual configuration related to the SP API :)
+    'region' => 'eu-west-1',
+    'host' => 'sellingpartnerapi-eu.amazon.com'
+];
+
+//Create token storage which will store the temporary tokens
+$tokenStorage = new DoubleBreak\Spapi\SimpleTokenStorage('./aws-tokens');
+
+//Create the request signer which will be automatically used to sign all of the
+//requests to the API
+$signer = new DoubleBreak\Spapi\Signer();
+
+//Create Credentials service and call getCredentials() to obtain
+//all the tokens needed under the hood
+$credentials = new DoubleBreak\Spapi\Credentials($tokenStorage, $signer, $config);
+//get credentials with migration token, it's needed for /authorization/v1/authorizationCode request
+$cred = $credentials->getCredentials(true);
+
+/** The application logic implementation **/
+
+//Create SP API Catalog client and execute one ot its REST methods.
+$authorizationClient = new DoubleBreak\Spapi\Api\Authorization($cred, $config);
+
+//Get Authorization code
+$result = $authorizationClient->getAuthorizationCode([
+    'developerId' => '<DEVELOPER-ID-AUTHORIZED-BY-SELLING-PARTNER>',
+    'mwsAuthToken' => '<MWS-AUTH-TOKEN>',
+    'sellingPartnerId' => '<SELLING-PARTNER-ID>'
+])['payload'];
+
+//Authorization code should be changed to Access and Refresh token
+print_r($credentials->exchangesAuthorizationCodeForRefreshToken($result['authorizationCode']));
+```
