@@ -2,3 +2,4 @@ vendor/
 codelab/
 test.php
 aws-tokens
+.idea
