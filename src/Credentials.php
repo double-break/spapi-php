@@ -29,7 +29,7 @@ class Credentials
      */
     public function getCredentials($useMigrationToken = false)
     {
-        $lwaAccessToken = $useMigrationToken === true ? $this->getMigrationToken() : $useMigrationToken === 'grantless' ? $this->getMigrationToken() : $this->getLWAToken();
+        $lwaAccessToken = $useMigrationToken === true ? $this->getMigrationToken() : $useMigrationToken === 'grantless' ? $this->getGrantlessAuthToken() : $this->getLWAToken();
         $stsCredentials = $this->getStsTokens();
 
         return [
