@@ -11,9 +11,9 @@
   "require": {
     "guzzlehttp/guzzle": "^6.5",
     "guzzlehttp/psr7": "^1.7",
-    "patchwork/utf8": "~1.2",
     "ext-simplexml": "*",
-    "ext-json": "*"
+    "ext-json": "*",
+    "ext-zlib": "*"
   },
   "autoload": {
     "psr-4": { "DoubleBreak\\Spapi\\" : "src/" }

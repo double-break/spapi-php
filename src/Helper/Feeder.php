@@ -10,7 +10,6 @@ namespace DoubleBreak\Spapi\Helper;
 use DoubleBreak\Spapi\ASECryptoStream;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Request;
-use Patchwork\Utf8;
 
 class Feeder
 {
@@ -44,7 +43,7 @@ class Feeder
         }
 
         // utf8 !
-        $file = Utf8::utf8_encode($file);
+        $file = utf8_encode($file);
 
         // encrypt string and get value as base64 encoded string
         $encryptedFile = ASECryptoStream::encrypt($file, $key, $initializationVector);
@@ -90,6 +89,9 @@ class Feeder
         $key = base64_decode($key, true);
 
         $decryptedFile = ASECryptoStream::decrypt(file_get_contents($feedDownloadUrl), $key, $initializationVector);
+        if($payload['compressionAlgorithm']=='GZIP') {
+            $decryptedFile=gzdecode($decryptedFile);
+        }
         $decryptedFile = preg_replace('/\s+/S', " ", $decryptedFile);
 
         $xml = simplexml_load_string($decryptedFile);
