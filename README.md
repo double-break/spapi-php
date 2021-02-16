@@ -329,12 +329,10 @@ $cred = $credentials->getCredentials('grantless');
 
 /** The application logic implementation **/
 
-//Create SP API Catalog client and execute one ot its REST methods.
+//Create SP API Notification client and execute one ot its REST methods.
 $notificationClient = new DoubleBreak\Spapi\Api\Notifications($cred, $config);
 
-//Get Authorization code
+//Get notification destinations
 $result = $notificationClient->getDestinations();
-
-//Authorization code should be changed to Access and Refresh token
 print_r($result['payload']);
 ```
