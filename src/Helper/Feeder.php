@@ -34,12 +34,13 @@ class Feeder
         $key = base64_decode($key, true);
 
         // get file to upload
-        $file = file_get_contents($feedContentFilePath);
-        $fileResourceType = gettype($file);
+        $fileResourceType = gettype($feedContentFilePath);
 
         // resource or string ? make it to a string
         if ($fileResourceType == 'resource') {
-            $file = stream_get_contents($file);
+            $file = stream_get_contents($feedContentFilePath);
+        } else {
+            $file = file_get_contents($feedContentFilePath);
         }
 
         // utf8 !
