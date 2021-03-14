@@ -90,7 +90,7 @@ class Feeder
         $key = base64_decode($key, true);
 
         $decryptedFile = ASECryptoStream::decrypt(file_get_contents($feedDownloadUrl), $key, $initializationVector);
-        if($payload['compressionAlgorithm']=='GZIP') {
+        if(isset($payload['compressionAlgorithm']) && $payload['compressionAlgorithm']=='GZIP') {
             $decryptedFile=gzdecode($decryptedFile);
         }
         $decryptedFile = preg_replace('/\s+/S', " ", $decryptedFile);
