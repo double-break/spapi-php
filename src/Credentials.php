@@ -34,9 +34,49 @@ class Credentials
         $stsCredentials = $this->getStsTokens();
 
         return [
-            'lwa_access_token' => $lwaAccessToken,
+            'access_token' => $lwaAccessToken,
             'sts_credentials' => $stsCredentials
         ];
+    }
+
+    /**
+     * Prepares credentials for clients which require Restricted Data Tokens
+     * see: https://github.com/amzn/selling-partner-api-docs/blob/main/guides/en-US/use-case-guides/tokens-api-use-case-guide/tokens-API-use-case-guide-2021-03-01.md
+     *
+     *
+     * @param  array https://github.com/amzn/selling-partner-api-docs/blob/main/references/tokens-api/tokens_2021-03-01.md#createrestricteddatatokenrequest$restrictedOperations Array with items representing CreateRestrictedDataTokenRequest
+     * see: https://github.com/amzn/selling-partner-api-docs/blob/main/references/tokens-api/tokens_2021-03-01.md#createrestricteddatatokenrequest
+     * @return array                       aceess token and STS credentials
+     */
+    public function getRdtCredentials(array $restrictedOperations)
+    {
+      $rdAccessToken = $this->getRestrictedDataAccessToken($restrictedOperations);
+      $stsCredentials = $this->getStsTokens();
+
+      return [
+          'access_token' => $rdAccessToken,
+          'sts_credentials' => $stsCredentials
+      ];
+    }
+
+    private function getRestrictedDataAccessToken($restrictedOperations = [])
+    {
+      $restrictedOperationsHash = md5(\json_encode($restrictedOperations));
+      $tokenKey = 'restricted_data_token_' . $restrictedOperationsHash;
+      $knownToken = $this->loadTokenFromStorage($tokenKey);
+      if (!is_null($knownToken)) {
+        return $knownToken;
+      }
+
+      $cred = $this->getCredentials();
+      $tokensClient = new DoubleBreak\Spapi\Api\Tokens($creds, $this->config);
+
+      $result = $tokenStorage->createRestrictedDataToken($restrictedOperations);
+      $rdt = $result['restrictedDataToken'];
+      $expiresOn = time() + $result['expiresIn'];
+
+      $this->tokenStorage->storeToken($tokenKey, $rdt);
+      return $rdt;
     }
 
     private function getLWAToken()
