@@ -69,14 +69,21 @@ class Credentials
       }
 
       $cred = $this->getCredentials();
-      $tokensClient = new DoubleBreak\Spapi\Api\Tokens($creds, $this->config);
+      $tokensClient = new \DoubleBreak\Spapi\Api\Tokens($cred, $this->config);
 
-      $result = $tokenStorage->createRestrictedDataToken($restrictedOperations);
+      $result = $tokensClient->createRestrictedDataToken($restrictedOperations);
       $rdt = $result['restrictedDataToken'];
       $expiresOn = time() + $result['expiresIn'];
 
-      $this->tokenStorage->storeToken($tokenKey, $rdt);
-      return $rdt;
+      $this->tokenStorage->storeToken($tokenKey, [
+        'token' => $rdt,
+        'expiresOn' => $expiresOn
+      ]);
+
+      return [
+        'token' => $rdt,
+        'expiresOn' => $expiresOn
+      ];
     }
 
     private function getLWAToken()

@@ -377,13 +377,15 @@ print_r($result['payload']);
 
   $credentials = new DoubleBreak\Spapi\Credentials($tokenStorage, $signer, $config);
   $cred = $credentials->getRdtCredentials([
-    [
-      'method' => 'GET',
-      'path' => '/orders/v0/orders/{orderId}/buyerInfo'
-    ],
-    [
-      'method' => 'GET',
-      'path' => '/mfn/v0/shipments/{shipmentId}'
+    'restrictedResources' => [
+      [
+        'method' => 'GET',
+        'path' => '/orders/v0/orders/{orderId}/buyerInfo'
+      ],
+      [
+        'method' => 'GET',
+        'path' => '/mfn/v0/shipments/{shipmentId}'
+      ]
     ]
   ]);
 
