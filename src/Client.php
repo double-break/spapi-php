@@ -41,7 +41,7 @@ class Client {
     //Prepare for signing
     $signOptions = [
       'service' => 'execute-api',
-      'access_token' => $this->credentials['lwa_access_token'],
+      'access_token' => $this->credentials['access_token'],
       'access_key' => $this->credentials['sts_credentials']['access_key'],
       'secret_key' =>  $this->credentials['sts_credentials']['secret_key'],
       'security_token' =>  $this->credentials['sts_credentials']['session_token'],
