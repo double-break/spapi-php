@@ -80,10 +80,7 @@ class Credentials
         'expiresOn' => $expiresOn
       ]);
 
-      return [
-        'token' => $rdt,
-        'expiresOn' => $expiresOn
-      ];
+      return $rdt;
     }
 
     private function getLWAToken()
