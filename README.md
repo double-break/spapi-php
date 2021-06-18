@@ -1,3 +1,4 @@
+[TOC]
 # SPAPI
 
 spapi-php is a http client for Amazon's Selling Partner API
