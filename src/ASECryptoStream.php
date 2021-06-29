@@ -68,7 +68,7 @@ class ASECryptoStream
      */
     public static function encrypt(string $plainText, string $key, string $iv): string
     {
-        $plainText = static::getPaddedText($plainText);
+        //$plainText = static::getPaddedText($plainText);
         return openssl_encrypt($plainText, static::CIPHER, $key, OPENSSL_RAW_DATA, $iv);
     }
 
