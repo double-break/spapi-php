@@ -1,5 +1,6 @@
 vendor/
 codelab/
+codegen/
 test.php
 aws-tokens
 .idea
