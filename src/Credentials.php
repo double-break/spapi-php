@@ -237,7 +237,7 @@ class Credentials
             'region' => 'us-east-1', //This should be hardcoded
             'host' => $host,
             'uri' => $uri,
-            'payload' => \GuzzleHttp\Psr7\build_query($requestOptions['form_params']),
+            'payload' => \GuzzleHttp\Psr7\Query::build($requestOptions['form_params']),
             'method' => 'POST',
         ]);
 

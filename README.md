@@ -110,8 +110,8 @@ composer update double-break/spapi-php
 
   //Check the catalog info for B074Z9QH5F ASIN
   $result = $catalogClient->getCatalogItem('B074Z9QH5F', [
-    'MarketplaceId' => 'A1PA6795UKMFR9',
-  ])['payload'];
+      'marketplaceIds' => 'A1PA6795UKMFR9',
+  ]);
 
 
   print_r($result);

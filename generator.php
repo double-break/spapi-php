@@ -3,7 +3,7 @@
 /**
 * Amazon Selling Partner API client generator
 * @author Lyubo Slavilov
-* This file is used to generate clients for Apazon Selling Partner API
+* This file is used to generate clients for Amazon Selling Partner API
 * by using the OpenAPI (f.k.a Swagger) specifictaion provided by Amazon
 * https://github.com/amzn/selling-partner-api-models/tree/main/models
 *
