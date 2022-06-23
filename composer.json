@@ -13,7 +13,7 @@
     "ext-json": "*",
     "ext-zlib": "*",
     "guzzlehttp/guzzle": "^7.4",
-    "guzzlehttp/psr7": "^2.1"
+    "guzzlehttp/psr7": "^2.4"
   },
   "autoload": {
     "psr-4": { "DoubleBreak\\Spapi\\" : "src/" }
