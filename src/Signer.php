@@ -10,7 +10,38 @@ class Signer {
    * @return array request with signed headers
    */
 
+
   public static function sign($request, $signOptions)
+  {
+
+    if ($signOptions['sign_algorithm'] === 'legacy') {
+      return self::signUsingLegacyAlgorithm($request, $signOptions);
+    } else {
+      return self::signUsingSimpleAlgorithm($request, $signOptions);
+    }
+  }
+
+
+  private static function signUsingSimpleAlgorithm($request, $signOptions)
+  {
+
+      //optionl
+      $accessToken = $signOptions['access_token'] ?? null;
+      $date = gmdate('Ymd\THis\Z');
+      $userAgent = $signOptions['user_agent'] ?? 'spapi_client';
+
+      $headers = [
+          'x-amz-access-token' => $accessToken,
+          'x-amz-date' => $date,
+          'user-agent' => $userAgent,
+      ];
+
+      $request['headers'] = array_merge($request['headers'], $headers);
+
+      return $request;
+  }
+
+  private static function signUsingLegacyAlgorithm($request, $signOptions)
   {
     //required
     $service = $signOptions['service'] ?? null;

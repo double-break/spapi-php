@@ -1,115 +1,129 @@
 <?php
+
 namespace DoubleBreak\Spapi;
 
-class Client {
+class Client
+{
 
-  use HttpClientFactoryTrait;
+    use HttpClientFactoryTrait;
 
-  protected $credentials;
-  protected $config;
-  protected $signer;
-  protected $lastHttpResponse = null;
-  public function __construct(array $credentials = [], array $config = [])
-  {
-    $this->credentials = $credentials;
-    $this->config = $config;
-    $this->signer = new Signer(); //Should be injected :(
-  }
+    protected $credentials;
+    protected $config;
+    protected $lastHttpResponse = null;
 
-
-  private function normalizeHeaders($headers)
-  {
-    return $result = array_combine(
-       array_map(function($header) { return strtolower($header); }, array_keys($headers)),
-       $headers
-    );
-
-  }
-
-  private function headerValue($header)
-  {
-      return \GuzzleHttp\Psr7\Header::parse($header)[0];
-  }
-
-
-  private function prepareRequestOptions($uri, $requestOptions)
-  {
-      $requestOptions['headers'] = $requestOptions['headers'] ?? [];
-      $requestOptions['headers']['accept'] = 'application/json';
-      $requestOptions['headers'] = $this->normalizeHeaders($requestOptions['headers']);
-
-
-      //Prepare for signing
-      $signOptions = [
-        'service' => 'execute-api',
-        'access_token' => $this->credentials['access_token'],
-        'access_key' => $this->credentials['sts_credentials']['access_key'],
-        'secret_key' =>  $this->credentials['sts_credentials']['secret_key'],
-        'security_token' =>  $this->credentials['sts_credentials']['session_token'],
-        'region' =>  $this->config['region'] ?? null,
-        'host' => $this->config['host'],
-        'uri' =>  $uri,
-        'method' => $requestOptions['method']
-      ];
-
-      if (isset($requestOptions['query'])) {
-        $query = $requestOptions['query'];
-        ksort($query);
-        $signOptions['query_string'] =  \GuzzleHttp\Psr7\Query::build($query);
-      }
-
-      if (isset($requestOptions['form_params'])) {
-        ksort($requestOptions['form_params']);
-        $signOptions['payload'] = \GuzzleHttp\Psr7\Query::build($requestOptions['form_params']);
-      }
-
-      if (isset($requestOptions['json'])) {
-        ksort($requestOptions['json']);
-        $signOptions['payload'] = json_encode($requestOptions['json']);
-      }
-
-      //Sign
-      $requestOptions = $this->signer->sign($requestOptions, $signOptions);
-
-      return $requestOptions;
-  }
-
-  public function send($uri, $requestOptions = [])
-  {
-
-    $requestOptions = $this->prepareRequestOptions($uri, $requestOptions);
-    $client = $this->createHttpClient([
-      'base_uri' => 'https://' . $this->config['host']
-    ]);
-
-    try {
-      $this->lastHttpResponse = null;
-      $method = $requestOptions['method'];
-      unset($requestOptions['method']);
-      $response = $client->request($method, $uri, $requestOptions);
-      $this->lastHttpResponse = $response;
-      return json_decode($response->getBody(), true);
-    } catch (\GuzzleHttp\Exception\ClientException $e) {
-      $this->lastHttpResponse = $e->getResponse();
-      throw $e;
+    public function __construct(array $credentials = [], array $config = [])
+    {
+        $this->credentials = $credentials;
+        $this->config = $config;
     }
 
-  }
 
-  public function sendAsync($uri, $requestOptions)
-  {
-      $requestOptions = $this->prepareRequestOptions($uri, $requestOptions);
-      $client = $this->createHttpClient([
-        'base_uri' => 'https://' . $this->config['host']
-      ]);
-      $method = $requestOptions['method'];
-      unset($requestOptions['method']);
-      return  $client->requestAsync($method, $uri, $requestOptions);
-  }
+    private function normalizeHeaders($headers)
+    {
+        return $result = array_combine(
+            array_map(function ($header) {
+                return strtolower($header);
+            }, array_keys($headers)),
+            $headers
+        );
+    }
 
-  public function getLastHttpResponse()
-  {
-    return $this->lastHttpResponse;
-  }
+    private function headerValue($header)
+    {
+        return \GuzzleHttp\Psr7\Header::parse($header)[0];
+    }
+
+
+    private function useSts(): bool
+    {
+        return !empty($this->config['access_key']) && !empty($this->config['secret_key']) && !empty($this->config['role_arn']);
+    }
+
+    private function prepareRequestOptions($uri, $requestOptions)
+    {
+        $requestOptions['headers'] = $requestOptions['headers'] ?? [];
+        $requestOptions['headers']['accept'] = 'application/json';
+        $requestOptions['headers'] = $this->normalizeHeaders($requestOptions['headers']);
+
+
+
+        if ($this->useSts()) {
+            //Prepare for signing
+            $signOptions = [
+                'sign_algorithm' => 'legacy',
+                'service' => 'execute-api',
+                'access_token' => $this->credentials['access_token'],
+                'access_key' => $this->credentials['sts_credentials']['access_key'],
+                'secret_key' => $this->credentials['sts_credentials']['secret_key'],
+                'security_token' => $this->credentials['sts_credentials']['session_token'],
+                'region' => $this->config['region'] ?? null,
+                'host' => $this->config['host'],
+                'uri' => $uri,
+                'method' => $requestOptions['method']
+            ];
+        } else {
+            $signOptions = [
+                'sign_algorithm' => 'simple',
+                'access_token' => $this->credentials['access_token'],
+            ];
+        }
+
+        if (isset($requestOptions['query'])) {
+            $query = $requestOptions['query'];
+            ksort($query);
+            $signOptions['query_string'] = \GuzzleHttp\Psr7\Query::build($query);
+        }
+
+        if (isset($requestOptions['form_params'])) {
+            ksort($requestOptions['form_params']);
+            $signOptions['payload'] = \GuzzleHttp\Psr7\Query::build($requestOptions['form_params']);
+        }
+
+        if (isset($requestOptions['json'])) {
+            ksort($requestOptions['json']);
+            $signOptions['payload'] = json_encode($requestOptions['json']);
+        }
+
+        //Sign
+        $requestOptions = Signer::sign($requestOptions, $signOptions);
+
+        return $requestOptions;
+    }
+
+    public function send($uri, $requestOptions = [])
+    {
+        $requestOptions = $this->prepareRequestOptions($uri, $requestOptions);
+        $client = $this->createHttpClient([
+            'base_uri' => 'https://' . $this->config['host']
+        ]);
+
+        try {
+            $this->lastHttpResponse = null;
+            $method = $requestOptions['method'];
+            unset($requestOptions['method']);
+            $response = $client->request($method, $uri, $requestOptions);
+            $this->lastHttpResponse = $response;
+            return json_decode($response->getBody(), true);
+        } catch (\GuzzleHttp\Exception\ClientException $e) {
+            $this->lastHttpResponse = $e->getResponse();
+            throw $e;
+        }
+    }
+
+    public function sendAsync($uri, $requestOptions)
+    {
+        $requestOptions = $this->prepareRequestOptions($uri, $requestOptions);
+        $client = $this->createHttpClient([
+            'base_uri' => 'https://' . $this->config['host']
+        ]);
+        $method = $requestOptions['method'];
+        unset($requestOptions['method']);
+        return $client->requestAsync($method, $uri, $requestOptions);
+    }
+
+    public function getLastHttpResponse()
+    {
+        return $this->lastHttpResponse;
+    }
 
 }

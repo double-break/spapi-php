@@ -17,7 +17,15 @@ class Credentials
     {
         $this->config = $config;
         $this->tokenStorage = $tokenStorage;
+
+        //Signer instance is preserved for legacy backward compatibility. It now operates as static class.
         $this->signer = $signer;
+    }
+
+
+    private function useSts(): bool
+    {
+        return !empty($this->config['access_key']) && !empty($this->config['secret_key']) && !empty($this->config['role_arn']);
     }
 
     /**
@@ -31,7 +39,8 @@ class Credentials
     {
         $lwaAccessToken = $useMigrationToken === true ? $this->getMigrationToken() :
             ($useMigrationToken === 'grantless' ? $this->getGrantlessAuthToken() : $this->getLWAToken());
-        $stsCredentials = $this->getStsTokens();
+
+        $stsCredentials = $this->useSts() ? $this->getStsTokens() : null;
 
         return [
             'access_token' => $lwaAccessToken,
@@ -44,48 +53,47 @@ class Credentials
      * see: https://github.com/amzn/selling-partner-api-docs/blob/main/guides/en-US/use-case-guides/tokens-api-use-case-guide/tokens-API-use-case-guide-2021-03-01.md
      *
      *
-     * @param  array https://github.com/amzn/selling-partner-api-docs/blob/main/references/tokens-api/tokens_2021-03-01.md#createrestricteddatatokenrequest$restrictedOperations Array with items representing CreateRestrictedDataTokenRequest
+     * @param array https://github.com/amzn/selling-partner-api-docs/blob/main/references/tokens-api/tokens_2021-03-01.md#createrestricteddatatokenrequest$restrictedOperations Array with items representing CreateRestrictedDataTokenRequest
      * see: https://github.com/amzn/selling-partner-api-docs/blob/main/references/tokens-api/tokens_2021-03-01.md#createrestricteddatatokenrequest
      * @return array                       aceess token and STS credentials
      */
     public function getRdtCredentials(array $restrictedOperations)
     {
-      $rdAccessToken = $this->getRestrictedDataAccessToken($restrictedOperations);
-      $stsCredentials = $this->getStsTokens();
+        $rdAccessToken = $this->getRestrictedDataAccessToken($restrictedOperations);
+        $stsCredentials = $this->useSts() ? $this->getStsTokens() : null;
 
-      return [
-          'access_token' => $rdAccessToken,
-          'sts_credentials' => $stsCredentials
-      ];
+        return [
+            'access_token' => $rdAccessToken,
+            'sts_credentials' => $stsCredentials
+        ];
     }
 
     private function getRestrictedDataAccessToken($restrictedOperations = [])
     {
-      $restrictedOperationsHash = md5(\json_encode($restrictedOperations));
-      $tokenKey = 'restricted_data_token_' . $restrictedOperationsHash;
-      $knownToken = $this->loadTokenFromStorage($tokenKey);
-      if (!is_null($knownToken)) {
-        return $knownToken;
-      }
+        $restrictedOperationsHash = md5(\json_encode($restrictedOperations));
+        $tokenKey = 'restricted_data_token_' . $restrictedOperationsHash;
+        $knownToken = $this->loadTokenFromStorage($tokenKey);
+        if (!is_null($knownToken)) {
+            return $knownToken;
+        }
 
-      $cred = $this->getCredentials();
-      $tokensClient = new \DoubleBreak\Spapi\Api\Tokens($cred, $this->config);
+        $cred = $this->getCredentials();
+        $tokensClient = new \DoubleBreak\Spapi\Api\Tokens($cred, $this->config);
 
-      $result = $tokensClient->createRestrictedDataToken($restrictedOperations);
-      $rdt = $result['restrictedDataToken'];
-      $expiresOn = time() + $result['expiresIn'];
+        $result = $tokensClient->createRestrictedDataToken($restrictedOperations);
+        $rdt = $result['restrictedDataToken'];
+        $expiresOn = time() + $result['expiresIn'];
 
-      $this->tokenStorage->storeToken($tokenKey, [
-        'token' => $rdt,
-        'expiresOn' => $expiresOn
-      ]);
+        $this->tokenStorage->storeToken($tokenKey, [
+            'token' => $rdt,
+            'expiresOn' => $expiresOn
+        ]);
 
-      return $rdt;
+        return $rdt;
     }
 
     private function getLWAToken()
     {
-
         $knownToken = $this->loadTokenFromStorage('lwa_access_token');
         if (!is_null($knownToken)) {
             return $knownToken;
@@ -116,7 +124,6 @@ class Credentials
         ]);
 
         return $json['access_token'];
-
     }
 
     /**
@@ -148,7 +155,6 @@ class Credentials
             $response = $client->post('/auth/o2/token', $requestOptions);
 
             $json = json_decode($response->getBody(), true);
-
         } catch (\Exception $e) {
             //log something
             throw $e;
@@ -189,7 +195,6 @@ class Credentials
             $response = $client->post('/auth/o2/token', $requestOptions);
 
             $json = json_decode($response->getBody(), true);
-
         } catch (\Exception $e) {
             //log something
             throw $e;
@@ -230,7 +235,8 @@ class Credentials
         $host = 'sts.amazonaws.com';
         $uri = '/';
 
-        $requestOptions = $this->signer->sign($requestOptions, [
+        $requestOptions = Signer::sign($requestOptions, [
+            'sign_algorithm' => 'legacy',
             'service' => 'sts',
             'access_key' => $this->config['access_key'],
             'secret_key' => $this->config['secret_key'],
@@ -261,12 +267,10 @@ class Credentials
             ]);
 
             return $tokens;
-
         } catch (\Exception $e) {
             //log something
             throw $e;
         }
-
     }
 
     /**
@@ -293,7 +297,6 @@ class Credentials
             $response = $client->post('/auth/o2/token', $requestOptions);
 
             return json_decode($response->getBody(), true);
-
         } catch (\Exception $e) {
             throw $e;
         }
